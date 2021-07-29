@@ -1,0 +1,446 @@
+{% extends "pwa/base.html" %}
+{% block head %}Login || {{ block.super }}{% endblock head %}
+{% block content %}
+{% load static %}
+
+<style>
+	*{
+	padding: 0;
+	margin: 0;
+	text-decoration: none;
+	list-style: none;
+	box-sizing: border-box;
+	}
+	#home{
+	  background-color: whitesmoke;
+	}
+	body{
+	font-family: montserrat;
+	}
+	nav{
+	background:#0d1440;
+	height: 80px;
+	width: auto;
+	position: sticky;
+	top:0;
+	}
+	label.logo{
+	color: white;
+	font-size: 35px;
+	line-height: 80px;
+	padding: 0 100px;
+	font-weight: bold;
+	}
+	nav ul{
+	float: right;
+	margin-right: 300px;
+	}
+	nav ul li{
+	display: inline-block;
+	line-height: 80px;
+	margin: 0;
+	margin-top: 0px;
+	}
+	nav ul li a{
+	color: white;
+	font-size: 17px;
+	padding: 7px 13px;
+	border-radius: 3px;
+	text-transform: uppercase;
+	}
+	a.active,.tabs:hover{
+	background: #ffc220;;
+	transition: .5s;
+	}
+	.checkbtn{
+	font-size: 30px;
+	color: white;
+	float: right;
+	line-height: 80px;
+	margin-right: 40px;
+	cursor: pointer;
+	display: none;
+	}
+	#check{
+	display: none;
+	}
+	img.sticky{
+	  margin-left:90%;
+	}
+	@media (max-width: 952px){
+	label.logo{
+	font-size: 30px;
+	padding-left: 50px;
+	}
+	nav ul li a{
+	font-size: 16px;
+	}
+	
+	}
+	@media (max-width: 858px){
+	img.sticky{
+	  margin-left:70%;
+	}
+	.checkbtn{
+	display: block;
+	
+	}
+	ul{
+	position: fixed;
+	width: 100%;
+	height: 100vh;
+	background: #2c3e50;
+	top: 80px;
+	left: -100%;
+	text-align: center;
+	transition: all .5s;
+	}
+	nav ul li{
+	display: block;
+	margin: 50px 0;
+	line-height: 30px;
+	}
+	nav ul li a{
+	font-size: 20px;
+	}
+	a:hover,a.active{
+	background: none;
+	color: #0082e6;
+	}
+	#check:checked ~ ul{
+	left: 0;
+	}
+	.service{
+	  margin-left:3%;
+	}
+	}
+	section{
+	background: url(bg1.jpg) no-repeat;
+	background-size: cover;
+	  }
+	
+	
+	/* Caption text */
+	.text {
+	color: #f2f2f2;
+	font-size: 15px;
+	padding: 8px 12px;
+	position: absolute;
+	bottom: 8px;
+	width: 100%;
+	text-align: center;
+	}
+	
+	/* Number text (1/3 etc) */
+	.numbertext {
+	color: #f2f2f2;
+	font-size: 12px;
+	padding: 8px 12px;
+	position: absolute;
+	top: 0;
+	}
+	
+	/* The dots/bullets/indicators */
+	.dot {
+	height: 15px;
+	width: 15px;
+	margin: 0 2px;
+	background-color: #bbb;
+	border-radius: 50%;
+	display: inline-block;
+	transition: background-color 0.6s ease;
+	}
+	
+	
+	
+	
+	.footer-small-nav > li {
+	display: inline-block; }
+	.footer-small-nav > li a {
+	margin: 0 10px 10px 0; }
+	.footer-small-nav > li a:hover, .footer-small-nav > li a:focus {
+	color: #1089ff; }
+	
+	
+	
+	.padding-top-bottom {
+	padding-top: 120px;
+	padding-bottom: 120px; }
+	   
+	img.sticky {
+	position: -webkit-sticky;
+	position:fixed;
+	top:500px;
+	
+	}
+	  .button{
+	   
+		font-size:15px;
+		border:1px solid black;
+		background-color:#01d28e;;
+		color:white;
+		border-radius:5px;
+		width:150px;
+		height:30px;
+		margin-left:10%;
+		margin-top:25px;
+	  }
+	  .button:hover{
+		cursor:pointer;
+		color:dimgray;
+	  }
+	  .container{
+		width:100%;
+		height:1200px;
+		background-color:#d4d4d4;
+	  }
+	  .navbar {
+	overflow: hidden;
+	background-color: #0d1440;
+	  
+	
+	}
+	
+	.navbar a {
+	float: right;
+	font-size: 16px;
+	color: white;
+	text-align: center;
+	padding: 14px 16px;
+	text-decoration: none;
+	
+	}
+	
+	.dropdown {
+	float: right;
+	overflow: hidden;
+	margin-right:0px;
+	   
+	}
+	
+	.dropdown .dropbtn {
+	font-size: 16px;  
+	border: none;
+	outline: none;
+	color: white;
+	padding: 14px 16px;
+	background-color: inherit;
+	font-family: inherit;
+	margin: 0;
+	}
+	
+	.navbar a:hover, .dropdown:hover .dropbtn {
+	background-color:black;
+	}
+	
+	.dropdown-content {
+	display: none;
+	position: absolute;
+	background-color: #f9f9f9;
+	min-width: 160px;
+	box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+	z-index: 9999;
+	  
+	}
+	
+	.dropdown-content a {
+	float: none;
+	color: black;
+	padding: 12px 16px;
+	text-decoration: none;
+	display: block;
+	text-align: left;
+	  z-index:99999;
+	
+	}
+	
+	.dropdown-content a:hover {
+	background-color: #ddd;
+	}
+	
+	.dropdown:hover .dropdown-content {
+	display: block;
+	}
+	  
+	  
+	  
+	
+	
+	.signup-form {
+	  font-family: "Roboto", sans-serif;
+	  width: 650px;
+	  margin: 30px auto;
+	  background: linear-gradient(to right, #ffffff 0%, #fafafa 50%, #ffffff 99%);
+	  border-radius: 10px;
+	}
+	
+	/* Form Header */
+	.form-header {
+	  background-color: #f6f9fc;
+	  border-top-left-radius: 10px;
+	  border-top-right-radius: 10px;
+	}
+	
+	.form-header h1 {
+	  font-size: 30px;
+	  text-align: center;
+	  color: #666;
+	  padding: 20px 0;
+	  border-bottom: 1px solid #cccccc;
+	}
+	
+	/* Form Body */
+	.form-body {
+	  padding: 10px 40px;
+	  color: #666;
+	}
+	
+	.form-group {
+	  margin-bottom: 40px;
+	}
+	
+	label{
+	  color: #1BBA93;
+	  font-size: 17px;
+	  font-weight: bold;
+	}
+	
+	 * {
+	box-sizing:border-box;
+	}
+	.error {
+	
+	  color: red;
+	}
+	
+	
+	.form-body .form-input {
+	  font-size: 17px;
+	  box-sizing: border-box;
+	  width: 100%;
+	  height: 34px;
+	  padding-left: 10px;
+	  padding-right: 10px;
+	  color: #333333;
+	  text-align: left;
+	  border: 1px solid #d6d6d6;
+	  border-radius: 4px;
+	  background: white;
+	}
+	
+	.horizontal-group .left {
+	  float: left;
+	  width: 49%;
+	}
+	
+	.horizontal-group .right {
+	  float: right;
+	  width: 49%;
+	}
+	
+	/*input[type="file"] {
+	  outline: none;
+	  cursor: pointer;
+	  font-size: 17px;
+	}*/
+	/* color of placeholder */
+	::-webkit-input-placeholder {
+	  color: #d9d9d9;
+	}
+	
+	/* Form Footer */
+	.signup-form .form-footer {
+	  background-color: #EFF0F1;
+	  border-bottom-left-radius: 10px;
+	  border-bottom-right-radius: 10px;
+	  padding: 10px 40px;
+	  text-align: right;
+	  border-top: 1px solid #cccccc;
+	  clear: both;
+	}
+	
+	.form-footer span {
+	  float: left;
+	  margin-top: 10px;
+	  color: #999;
+	  font-style: italic;
+	  font-weight: thin;
+	}
+	
+	.btn {
+	
+	  padding: 10px 20px;
+	  background-color: #1BBA93;
+	  font-size: 17px;
+	  border: none;
+	  border-radius: 5px;
+	  color: #bcf5e7;
+	  cursor: pointer;
+	}
+	
+	.btn:hover {
+	  background-color: #169c7b;
+	  color: white;
+	}
+	</style>
+  
+<style>
+	.form-control{
+		margin-right:100px;
+		padding-left: 20px;
+	}
+</style>
+<div class="signup-form">
+	<div class="form-header">
+		<h1>Log In</h1>
+	</div>
+{% if form.errors %}
+<p style="color: red;font-size: 30px;text-align: center;">Your username and password didn't match. Please try again.</p>
+{% endif %}
+{% if next %}
+{% if user.is_authenticated %}
+<p style="color: red;font-size: 30px;text-align: center;">Your account doesn't have access to this page. To proceed,
+please login with an account that has access.</p>
+{% else %}
+<p style="color: red;font-size: 30px;text-align: center;">Please login to see this page.</p>
+{% endif %}
+{% endif %}
+<form method="post" name="myForm" novalidate="" class="signup-form" action="{% url 'login' %}" style="align-self: center;margin-left: 20%;width:100%;">
+{% csrf_token %}
+<table >
+<tr>
+	<div class="form-body">
+		<div class="label-title">
+	<td  style="color: teal;height: 30;font-size: 20px;">{{ form.username.label_tag }}</td>
+		</div>
+<td  placeholder="Username" >{{ form.username }}</td>
+</div>
+</tr>
+<tr>
+	
+<td style="color: teal;height: 30;font-size: 55px;">{{ form.password.label_tag }}</td>
+
+		<div class="form-group">
+<td >{{ form.password }}</td>
+			</div>
+</tr>
+</table>
+<div class="form-group">
+<input type="submit" value="login" style="padding: 10px;" class="btn btn-primary "/>
+</div>
+<div class="clearfix">
+	<p style="color: black;margin-left: 20px;" class="label-title">Dont Remember Password   ? </p>    <a href="/password_reset/" style="font-size: 15px;"class="float-right" class="label-title">  Forgot Password</a></p>
+        </div>     
+		<p style="color: black;margin-left: 20px;" class="label-title">Don't have an account?</p>  <a href="{% url 'signup' %}"><bold>Register</bold></a>
+<input type="hidden" name="next" value="{{ next }}" />
+
+</form>
+{# Assumes you setup the password_reset view in your URLconf #}
+<div class="form-footer">
+</div>
+	</div>
+	
+</div>
+</div>
+
+{% endblock %}

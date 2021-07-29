@@ -1,0 +1,55 @@
+{% extends "pwa/base.html" %}
+{% block head %}List || {{ block.super }}{% endblock head %}
+{% block content %}
+{% load static %}
+{% if object.cimage %}
+    <img class="card-img-top" style="width:70%; height:70%" src="{{ object.cimage.url }}" alt="Card image cap">
+    {% else %}
+    <img class="card-img-top" style="width:70%; height:70%"  src="{% static 'no_image.jpg' %}" alt="Card image cap">
+    {% endif %}
+<style>
+    .btn {
+  
+  padding: 10px 20px;
+  background-color: #1BBA93;
+  font-size: 17px;
+  border: none;
+  border-radius: 5px;
+  color: #bcf5e7;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background-color: #169c7b;
+  color: white;
+}
+
+</style>
+<div >
+<h1>{{ object.cname }}</h1>
+<h2>MODEL:{{ object.cmodel}}</h2>
+<h3>{{ object.vid }}</h3>
+
+<h4>{{ object.description }} </h4>
+<h3>TYPE:{{ object.ctype|upper }}<p>RATING:{{ object.crating }}</p></h3>
+<p>{{ object.cnumber }}</p>
+
+
+<h1>PRICE:{{ object.cprice }}</h1>
+<h1>OWNER:{{ object.oid }}</p>
+<!-- <a href="/Lend/lend/request/"><button type="submit" class="btn">Request</button></a> -->
+<a href="tel:+0937487444384"><button type="submit" class="btn">Call</button></a>
+
+{% if request.user.is_authenticated %}
+{% if not request.user.is_owner %}
+<a href="/Lend/lend/car/request/submit/{{ object.car_id }}/"><button type="submit" class="btn">Submit</button></a>
+{% else %}
+<!-- <a href="/Lend/lend/request/submit/{{ object.bike_id }}/"></a><button disabled=disabled type="submit" class="btn">Submit</button></a> -->
+<button disabled=disabled type="submit" class="btn" title="please login as a customer">Submit</button>
+{% endif %}
+{% else %}
+<a href="/login/" target="_blank"><button type="submit" class="btn" title="LogIn as a Customer">Submit</button></a>
+
+{% endif %}
+</div>
+{% endblock content %}

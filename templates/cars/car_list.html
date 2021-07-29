@@ -1,0 +1,73 @@
+{% extends "pwa/base.html" %}
+{% block head %} Cars || block.super{% endblock head %}
+{% block content %}
+<style>
+  .btn {
+  
+  padding: 10px 20px;
+  background-color: blue;
+  font-size: 14px;
+  border: none;
+  border-radius: 5px;
+  color: #bcf5e7;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background-color: black;
+  color: white;
+}
+</style>
+<form method="GET" action="/Lend/car/">
+
+  <select style="width:20% ;"class="form-select form-select-lg " aria-label=".form-select-lg example" name="sort" id="cars">
+    <option value="1"selected>Filter</option>
+    <option value="1">Increasing Order</option>
+    <option value="0">Decreasing Order</option>
+  </select>
+  <select style="width:20% ;" name="sort1" class="form-select" size="3" aria-label="size 5 select example">
+    <option value="1">Price</option>
+    <option value="0">Rating</option>
+  </select>
+
+<button type="submit" style="margin-left: 200px;"class="btn dark-btn">Filter</button>
+</form>
+<form method="GET" action="/Lend/car/" class="form-inline my-2 my-lg-0" style="width: 20%;">
+  <input type="search" name="search" class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
+  <button  name="searchsort" value="1" class="btn btn-outline-success my-2 my-sm-0"style="margin-left: 200px;" type="submit">Search</button>
+</form>
+<br>
+
+</div>
+<section class="py-5">
+    <div class="container px-4 px-lg-5 mt-5">
+        <div class="row gx-4 gx-lg-5 row-cols-2 row-cols-md-3 row-cols-xl-4 justify-content-center">
+				{% for obj in object_list %}
+            {% load static %}
+            <div class="card-deck">
+  
+  
+  <div class="card border-dark bg-light mb-3"  style="margin-bottom:20px; padding:5px; border-radius:10px;">
+    {% if obj.cimage %}
+    <img class="card-img-top" src="{{ obj.cimage.url }}" alt="Card image cap">
+    {% else %}
+    <img class="card-img-top" src="{% static 'no_image.jpg' %}" alt="Card image cap">
+    {% endif %}
+    <div class="card-body">
+      <h5 class="card-title"><a href="/Lend/car/{{ obj.car_id }}" >{{ obj.cname }}</a></h5>
+      <p class="card-text"><h3>{{ obj.cmodel }}</h3>
+        <h5> Price : {{ obj.cprice }} / day</h5>
+        <h5>Ratings : <bold>{{ obj.crating }}</bold></h5>
+      <p class="card-text"><small class="text-muted">Last updated {{ obj.updated|timesince }} ago</small></p>
+    </div>
+  </div>
+</div>
+<br>
+				{% endfor %} -->
+
+            
+                </div>
+                </div>
+			</section>
+	
+{% endblock content %}

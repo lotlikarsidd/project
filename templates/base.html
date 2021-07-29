@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  {% load static %}
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-+0n0xVW2eSR5OomGNYDnhzAbDsOXxcvSN1TPprVMTNDbiYZCxYbOOl7+AMvyTG2x" crossorigin="anonymous">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-gtEjrD/SeCtmISkJkNUaaKMoLD0//ElJ19smozuHV6z3Iehds+3Ulb9Bn9Plx0x4" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="spa.css">
+    <script src="{% static 'bootstrap/js/bootstrap.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'bootstrap/css/bootstrap.min.css' %}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>My First PWA</title>
+    <meta name="theme-color" content="#ff0000"/>
+    <link rel="manifest" href="manifest.json">
+    <script src="pwa_index.js"></script>
+    <script>
+        //if browser support service worker
+        if('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('sw.js');
+        };
+      </script>
+ <script src="https://kit.fontawesome.com/a076d05399.js"></script>
+<style>
+  *{
+padding: 0;
+margin: 0;
+text-decoration: none;
+list-style: none;
+box-sizing: border-box;
+}
+body{
+font-family: montserrat;
+}
+nav{
+background:#0d1440;
+height: 80px;
+width: auto;
+position: sticky;
+top:0;
+}
+label.logo{
+color: white;
+font-size: 35px;
+line-height: 80px;
+padding: 0 100px;
+font-weight: bold;
+}
+nav ul{
+float: right;
+margin-right: 20px;
+}
+nav ul li{
+display: inline-block;
+line-height: 80px;
+margin: 0 5px;
+}
+nav ul li a{
+color: white;
+font-size: 17px;
+padding: 7px 13px;
+border-radius: 3px;
+text-transform: uppercase;
+}
+a.active,.tabs:hover{
+background: #ffc220;;
+transition: .5s;
+}
+.checkbtn{
+font-size: 30px;
+color: white;
+float: right;
+line-height: 80px;
+margin-right: 40px;
+cursor: pointer;
+display: none;
+}
+#check{
+display: none;
+}
+img.sticky{
+    margin-left:90%;
+}
+.service:hover{
+        opacity: 80%;
+    cursor:pointer;
+}
+@media (max-width: 952px){
+label.logo{
+font-size: 30px;
+padding-left: 50px;
+}
+nav ul li a{
+font-size: 16px;
+}
+
+}
+@media (max-width: 858px){
+img.sticky{
+    margin-left:70%;
+}
+.checkbtn{
+display: block;
+
+}
+ul{
+position: fixed;
+width: 100%;
+height: 100vh;
+background:#dee0e0;
+top: 80px;
+left: -100%;
+text-align: center;
+transition: all .5s;
+}
+nav ul li{
+display: block;
+margin: 50px 0;
+line-height: 30px;
+}
+nav ul li a{
+font-size: 20px;
+}
+a:hover,a.active{
+background: none;
+color: #0082e6;
+}
+#check:checked ~ ul{
+left: 0;
+}
+.service{
+    margin-left:3%;
+    
+}
+
+}
+section{
+background: url(bg1.jpg) no-repeat;
+background-size: cover;
+    }
+
+
+
+/* Caption text */
+.text {
+color: #f2f2f2;
+font-size: 15px;
+padding: 8px 12px;
+position: absolute;
+bottom: 8px;
+width: 100%;
+text-align: center;
+}
+
+/* Number text (1/3 etc) */
+.numbertext {
+color: #f2f2f2;
+font-size: 12px;
+padding: 8px 12px;
+position: absolute;
+top: 0;
+}
+
+/* The dots/bullets/indicators */
+.dot {
+height: 15px;
+width: 15px;
+margin: 0 2px;
+background-color: #bbb;
+border-radius: 50%;
+display: inline-block;
+transition: background-color 0.6s ease;
+}
+    * {
+box-sizing:border-box;
+}
+
+.left {
+background-color:#2196F3;
+padding:20px;
+float:left;
+width:20%; /* The width is 20%, by default */
+}
+
+.main {
+background-color:#f1f1f1;
+padding:20px;
+float:left;
+width:60%; /* The width is 60%, by default */
+}
+
+.right {
+background-color:#4CAF50;
+padding:20px;
+float:left;
+width:20%; /* The width is 20%, by default */
+}
+    
+.active {
+background-color: #717171;
+}
+
+.link:hover{
+  text-decoration: underline;         
+}
+
+
+@-webkit-keyframes fade {
+from {opacity: .4} 
+to {opacity: 1}
+}
+
+@keyframes fade {
+from {opacity: .4} 
+to {opacity: 1}
+}
+
+
+
+
+.footer-small-nav > li {
+display: inline-block; }
+.footer-small-nav > li a {
+margin: 0 10px 10px 0; }
+.footer-small-nav > li a:hover, .footer-small-nav > li a:focus {
+  color: #1089ff; }
+
+
+
+.padding-top-bottom {
+padding-top: 120px;
+padding-bottom: 120px; }
+       
+img.sticky {
+position: -webkit-sticky;
+position:fixed;
+top:500px;
+
+}
+#home{
+  background-color: whitesmoke;
+}
+</style>
+</head>
+<body>
+    {% load static %}
+    <main>
+        <div class="page active" id="home">
+          <nav>
+            <input type="checkbox" id="check">
+            <label for="check" class="checkbtn">
+            <i class="fas fa-bars"></i>
+            </label>
+            <label class="logo"><img style="border-radius:100px;margin-top:10px;margin-left: -20px;"src="{% static 'logo.png' %}" width="130px" height="60px"></label>
+            <ul>
+                <li><a class="active activeme tabs" href="/home"><i class="fa fa-home" aria-hidden="true"></i> Home</a></li>
+                <li><a class="tabs" href="#">About Us</a></li>
+                <li><a class="tabs" href="#">Services</a></li>
+                <li><a class="tabs" href="#">Contact</a></li>
+                <li><a class="tabs" href="/signup">Signup</a></li>
+                {% if check %}<li><a class="tabs" href="/logout">{{ user }}</a></li>{% else %}<li><a class="tabs" href="/login">Login</a></li>{% endif %}
+            </ul>
+          </nav>
+          <p style="background-color:#0d1440;width:100%;height:100px;margin-top:-50px;margin-left:0px;border-radius:50%;">navigation</p>
+          {% block content %}
+	        {% endblock content %}
+
+ <footer style="background-color: black;color: white;margin-top: 100px;" >
+   <h1 style="margin-left:5%;">DOYO<span style="font-size:20px;margin-top: -30px;color: #01d28e;">&nbsp;&nbsp;&nbsp;
+       
+       SERVICES</span></h1>
+     <hr>
+        <div >
+          <div >
+            <a href="#" class="link" style="margin-left:15%;color:whitesmoke">About</a>
+            <a href="#" class="link" style="margin-left:5%;color:whitesmoke">Services</a>
+            <a href="#" class="link" style="margin-left:5%;color:whitesmoke">Terms and Conditions</a>
+            <a href="#" class="link" style="margin-left:5%;color:whitesmoke">Best Price Guarantee</a>
+            <a href="#" class="link" style="margin-left:5%;color:whitesmoke"> Privacy &amp; Cookies Policy</a>
+          </div>
+            <hr>
+        </div>
+        <div  >
+           <div style="font-size:14px;color: whitesmoke">
+             <a href="#" class="link" style="color:whitesmoke">Customer Supports</a><br>
+             <a href="#" class="link" style="color:whitesmoke">FAQ</a><br>
+             <a href="#" class="link" style="color:whitesmoke">Contact Us</a><br>
+             <a href="#" class="link" style="color:whitesmoke">Have a Questions?</a>
+          </div>
+        </div>
+     
+
+        <div>
+
+          <p>
+Copyright &copy;<script>document.write(new Date().getFullYear());</script> All rights reserved 
+</p>
+        </div>
+    
+  </footer>
+</div>        
+        
+        
+    </main>
+
+</body>
+</html>
