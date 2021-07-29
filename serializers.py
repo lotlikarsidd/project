@@ -1,43 +1,52 @@
 from rest_framework import serializers
-from .models import Lend, Car, Bike
 
-class LendSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Lend
-        fields = ('lid',
-                  'cid',
-                  'oid',
-                  'date_upload',)
+from account.models import Account
 
-class CarSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Car
-        fields = ('car_id',
-                  'vid',
-                  'cnumber',
-                  'seating_capacity',
-                  'ctype',
-                  'cmodel',
-                  'cname',
-                  'crating',
-                  'cprice',
-                  'cimage',
-                  'oid',
-                  'transmission',
-                  'description')
 
-class BikeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Bike
-        fields = ('bike_id',
-                  'vid',
-                  'bnumber',
-                  'btype',
-                  'bmodel',
-                  'bname',
-                  'brating',
-                  'bprice',
-                  'bimage',
-                  'oid',
-                  'description')
+class RegistrationSerializer(serializers.ModelSerializer):
+
+	password2 				= serializers.CharField(style={'input_type': 'password'}, write_only=True)
+
+	class Meta:
+		model = Account
+		fields = ['email', 'username', 'password', 'password2','is_owner']
+		extra_kwargs = {
+				'password': {'write_only': True},
+		}	
+
+
+	def	save(self):
+
+		account = Account(
+					email=self.custome_validated_data['email'],
+					username=self.validated_data['username'],
+					is_owner=self.validated_data['is_owner']
+				)
+		password = self.validated_data['password']
+		password2 = self.validated_data['password2']
+		if password != password2:
+			raise serializers.ValidationError({'password': 'Passwords must match.'})
+		account.set_password(password)
+		account.save()
+		return account
+
+
+class AccountPropertiesSerializer(serializers.ModelSerializer):
+
+	class Meta:
+		model = Account
+		fields = ['pk', 'email', 'username', ]
+
+
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+
+	old_password 				= serializers.CharField(required=True)
+	new_password 				= serializers.CharField(required=True)
+	confirm_new_password 		= serializers.CharField(required=True)
+
+
+
+
 

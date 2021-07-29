@@ -1,76 +1,91 @@
 from django.db import models
-from datetime import date
-from Login.models import Owner, Customer
-from Coupon.models import Vehicle
-from django.db.models.signals import pre_save, post_save
-
-class Lend(models.Model):
-    lid         = models.AutoField(primary_key=True)
-    cid         = models.ForeignKey(Customer,on_delete=models.CASCADE)
-    oid         = models.ForeignKey(Owner,on_delete=models.CASCADE)
-    vid         = models.ForeignKey(Vehicle,on_delete=models.CASCADE)
-    date_upload = models.DateField(auto_now_add=True) 
-    date_of_return = models.DateField(blank=True,null=True)
-    valid       = models.BooleanField(default=True)
-
-    def __str__(self):
-        return str(self.lid)
-
-class Approval(models.Model):
-    ap_id       = models.AutoField(primary_key=True)
-    username    = models.CharField(max_length=100,blank=True,null=True)
-    lid         = models.ForeignKey(Lend,on_delete=models.CASCADE)
-    approve     = models.BooleanField(default=False)
-
-    def __str__(self):
-        return str(self.username) + ":" +str(self.approve)
-
-class Car(models.Model):
-    car_id      = models.AutoField(primary_key=True)
-    vid         = models.ForeignKey(Vehicle,on_delete=models.CASCADE,blank=True,null=True)
-    cnumber     = models.CharField(max_length=100,unique=True)
-    seating_capacity = models.IntegerField()
-    ctype       = models.CharField(max_length=100)
-    cmodel      = models.CharField(max_length=100)
-    cname       = models.CharField(max_length=100)
-    crating     = models.FloatField()
-    cprice      = models.FloatField()
-    cimage      = models.FileField(blank=True,null=True)
-    oid         = models.ForeignKey(Owner,on_delete=models.CASCADE)
-    transmission= models.CharField(max_length=500,blank=True,null=True)
-    description = models.TextField(max_length=1000,blank=True,null=True)
-    updated		= models.DateTimeField(auto_now=True)
-
-    def __str__(self):
-        return str(self.cname) + "-:-" + str(self.oid.oname)
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.shortcuts import render, redirect, reverse
+from django.conf import settings
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+from rest_framework.authtoken.models import Token
+from django.http import HttpResponse, HttpResponseRedirect
+from Login.models import Login, Owner, Customer
+from Coupon.models import CouponHandling, Get,Coupon
 
 
-class Bike(models.Model):
-    bike_id     = models.AutoField(primary_key=True)
-    vid         = models.ForeignKey(Vehicle,on_delete=models.CASCADE,blank=True,null=True)
-    bnumber     = models.CharField(max_length=100,unique=True)
-    btype       = models.CharField(max_length=100,blank=True,null=True)
-    bmodel      = models.CharField(max_length=100,blank=True,null=True)
-    bname       = models.CharField(max_length=100,blank=True,null=True)
-    brating     = models.FloatField(blank=True,null=True)
-    bprice      = models.FloatField(blank=True,null=True)
-    bimage      = models.FileField(max_length=100,blank=True,null=True)
-    oid         = models.ForeignKey(Owner,on_delete=models.CASCADE)
-    description = models.TextField(max_length=1000,blank=True,null=True)
-    updated		= models.DateTimeField(auto_now=True)
-    def __str__(self):
-        return str(self.bname) + "-:-" + str(self.oid.oname)
+class MyAccountManager(BaseUserManager):
+	def create_user(self, email, username, password=None):
+		if not email:
+			raise ValueError('Users must have an email address')
+		if not username:
+			raise ValueError('Users must have a username')
+
+		user = self.model(
+			email=self.normalize_email(email),
+			username=username,
+		)
+
+		user.set_password(password)
+		user.save(using=self._db)
+		return user
+
+	def create_superuser(self, email, username, password):
+		user = self.create_user(
+			email=self.normalize_email(email),
+			password=password,
+			username=username,
+		)
+		user.is_owner = True
+		user.is_staff = True
+		user.is_superuser = True
+		user.save(using=self._db)
+		return user
 
 
+class Account(AbstractBaseUser):
+	email 					= models.EmailField(verbose_name="email", max_length=60, unique=True)
+	username 				= models.CharField(max_length=30, unique=True)
+	date_joined				= models.DateTimeField(verbose_name='date joined', auto_now_add=True)
+	last_login				= models.DateTimeField(verbose_name='last login', auto_now=True)
+	is_owner				= models.BooleanField(default=False)
+	is_staff				= models.BooleanField(default=False)
+	is_superuser			= models.BooleanField(default=False)
 
-def Vehicle_pre_save_receiver(sender,instance,*args,**kwargs):
-    try:
-        V = Vehicle(vtype=instance.cname)
-        V.save()
-        instance.vid = V
-    except:
-        V = Vehicle(vtype=instance.bname)
-        V.save()
 
-pre_save.connect(Vehicle_pre_save_receiver,sender=Car)
-pre_save.connect(Vehicle_pre_save_receiver,sender=Bike)
+	USERNAME_FIELD = 'email'
+	REQUIRED_FIELDS = ['username']
+
+	objects = MyAccountManager()
+
+	def __str__(self):
+		return self.email
+
+	# For checking permissions. to keep it simple all admin have ALL permissons
+	def has_perm(self, perm, obj=None):
+		return self.is_superuser
+
+	# Does this user have permission to view this app? (ALWAYS YES FOR SIMPLICITY)
+	def has_module_perms(self, app_label):
+		return True
+
+
+@receiver(post_save, sender=settings.AUTH_USER_MODEL)
+def create_auth_token(sender, instance=None, created=False, **kwargs):
+    if created:
+        Token.objects.create(user=instance)
+        print(instance)
+        if instance.is_owner:
+            L = Login(username=instance.username,isowner=True,iscustomer=False)
+            L.save()
+            O = Owner(L,oname=instance.username,oemail=instance.email)
+            O.save()
+        else:
+            L = Login(username=instance.username,isowner=False,iscustomer=True)
+            L.save()
+            O = Customer(L,cname=instance.username,cemail=instance.email)
+            O.save()
+            C = CouponHandling(username=instance.username)
+            C.save()
+            C = Coupon.objects.get(coup_id=1)
+            G = Get(coup_id=C,username=instance.username,status=True)
+            G.save()
+		
+
+

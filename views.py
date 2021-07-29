@@ -1,479 +1,325 @@
+from rest_framework import status
+from django.http import HttpResponse, HttpResponseRedirect
+from django.contrib.auth import authenticate, logout
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
+from django.views.generic import ListView,DetailView,TemplateView, CreateView
+from .serializers import RegistrationSerializer, AccountPropertiesSerializer, ChangePasswordSerializer
+from account.models import Account
+from urllib.parse import urlparse, urlunparse
+from django.utils import timezone
+import datetime
+import random
+from time import sleep
+from django.conf import settings
+# Avoid shadowing the login() and logout() views below.
+from django.contrib.auth import (
+    REDIRECT_FIELD_NAME, get_user_model, login as auth_login,
+    logout as auth_logout, update_session_auth_hash,
+)
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import (
+    AuthenticationForm, PasswordChangeForm, PasswordResetForm, SetPasswordForm,
+)
+from Coupon.models import CouponHandling,Coupon,Get
+from django.contrib.auth.tokens import default_token_generator
+from django.contrib.sites.shortcuts import get_current_site
+from django.core.exceptions import ValidationError
+from django.http import HttpResponseRedirect, QueryDict
+from django.shortcuts import resolve_url
+from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django.utils.http import (
+    url_has_allowed_host_and_scheme, urlsafe_base64_decode,
+)
+from django.utils import timezone
+from django.utils.translation import gettext_lazy as _
+from django.views.decorators.cache import never_cache
+from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.debug import sensitive_post_parameters
+from django.views.generic.base import TemplateView
+from django.views.generic.edit import FormView
+from Login.models import Login,Customer
+from Rent.models import Tourist,Hotel
+from Lend.models import Car,Bike
+from rest_framework.authtoken.models import Token
 from django.shortcuts import render
-from django.db.models import Q
-from django.views.decorators.csrf import csrf_exempt
-from .models import Lend, Car, Bike, Approval
-from django.http.response import JsonResponse
-from Login.models import Owner, Customer
-from .serializers import LendSerializer, CarSerializer, BikeSerializer
-from django.core.files.storage import default_storage
+from django.contrib.auth.forms import UserCreationForm
+from account.forms import CustomFormCreate, CustomAuthCreate
 from django.shortcuts import render, redirect, reverse
-from datetime import date
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.shortcuts import render, HttpResponse, HttpResponseRedirect
-from django.views.generic import ListView, DetailView, TemplateView, CreateView, UpdateView, DeleteView, View
-from .forms import CarModelForm,LendModelForm, BikeModelForm, OwnerModelForm, CustomerModelForm
-from django.contrib.staticfiles.storage import staticfiles_storage
-from django.core.files.storage import default_storage
-import csv
-import json
-from Coupon.models import Vehicle
-
-
-            
-class CarsDetailView(DetailView):
-    model = Car
-    # form_class = CarModelForm
-    template_name = 'cars/car_detail.html'
-
-
-
-            
-class BikesDetailView(DetailView):
-    model = Bike
-    template_name = 'bikes/bike_detail.html'
-
-    def image_view(self):
-        if self.bimage:
-            return True
+from django.contrib.auth import get_user_model, login
+from Login.models import Login, Owner
+from Lend.models import Car, Bike,Lend
+from django.urls import reverse
+from django.contrib.auth import (
+    REDIRECT_FIELD_NAME, get_user_model, login as auth_login,
+    logout as auth_logout, update_session_auth_hash,
+)
+from django.shortcuts import render, redirect
+from django.core.mail import send_mail, BadHeaderError
+from django.http import HttpResponse
+from django.contrib.auth.forms import PasswordResetForm
+from django.contrib.auth.models import User
+from django.template.loader import render_to_string
+from django.db.models.query_utils import Q
+from django.utils.http import urlsafe_base64_encode
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
 
 
 
-class ModelFormCreateViewBike(CreateView):
-    form_class = BikeModelForm
-    template_name = 'bikes/forms_bike.html'
-    success_url = '/Lend/lend/dashboard/'
-    login_url = '/login'
+def password_reset_request(request):
+	if request.method == "POST":
+		password_reset_form = PasswordResetForm(request.POST)
+		if password_reset_form.is_valid():
+			data = password_reset_form.cleaned_data['email']
+			associated_users = User.objects.filter(Q(email=data))
+			print(associated_users)
+			if associated_users.exists():
+				for user in associated_users:
+					subject = "Password Reset Requested"
+					email_template_name = "registration/password_reset_email.txt"
+					c = {
+					"email":user.email,
+					'domain':'127.0.0.1:8000',
+					'site_name': 'Website',
+					"uid": urlsafe_base64_encode(force_bytes(user.pk)),
+					"user": user,
+					'token': default_token_generator.make_token(user),
+					'protocol': 'http',
+					}
+					email = render_to_string(email_template_name, c)
+					try:
+						send_mail(subject, email, 'admin@example.com' , [user.email], fail_silently=False)
+					except BadHeaderError:
+						return HttpResponse('Invalid header found.')
+					return redirect ("/password_reset/done/")
+	password_reset_form = PasswordResetForm()
+	return render(request=request, template_name="registration/password_reset.html", context={"password_reset_form":password_reset_form})
 
-    def form_valid(self,form):
-        instance = form.save(commit=False)
-        instance.bimage = self.request.FILES.get('bimage')
-        instance.user = self.request.user
-        instance.save()
-        return super().form_valid(form)
+User = get_user_model()
 
-    def get_context_data(self):
-        context = super(ModelFormCreateViewBike,self).get_context_data()
-        context['type_op'] = 'Create'
-        context['type'] = 'Car'
-        context['is_Car'] = True
-        return context
-    def form_invalid(self,form):
-        return redirect('/Lend/lend/dashboard/')
+def validate_email(email):
+	account = None
+	try:
+		account = Account.objects.get(email=email)
+	except Account.DoesNotExist:
+		return None
+	if account != None:
+		return email
 
-class ModelFormUpdateViewCar(UpdateView):
-    form_class = CarModelForm
-    template_name = 'cars/forms_car.html'
-    success_url = '/Lend/lend/viewcar/'
-    login_url = '/login'
-
-    def get_context_data(self):
-        context = super(ModelFormUpdateViewCar,self).get_context_data()
-        context['type_op'] = 'Update'
-        context['type'] = self.get_object().cname
-        return context
-    def form_invalid(self,form):
-        return redirect('/Lend/lend/viewcar/')
-
-    def get_queryset(self):
-        return Car.objects.all()
-
-
-
-class ViewDashboardCar(TemplateView):
-    template_name = 'profile/view.html'
-    def get_context_data(self):
-        obj = Owner.objects.filter(oemail=self.request.user.email).first()
-        cobj = Car.objects.filter(oid=obj.oid)
-        print(cobj)
-        context={'obj':cobj,'type':'Cars Lend','car':True}
-        return context
-    
-class ViewDashboardBike(TemplateView):
-    template_name = 'profile/view.html'
-    def get_context_data(self):
-        obj = Owner.objects.filter(oemail=self.request.user.email).first()
-        oobj = Bike.objects.filter(oid=obj.oid)
-        print(oobj)
-        context={'obj':oobj,'type':'Bikes Lend','car':False}
-        return context
-    
-class DeleteDashboardCar(TemplateView):
-    template_name = 'profile/view.html'
-    def get_context_data(self):
-        obj = Owner.objects.filter(oemail=self.request.user.email).first()
-        cobj = Car.objects.filter(oid=obj.oid)
-        print(cobj)
-        context={'obj':cobj,'type':'Cars Lend','car':True,'delete':True}
-        return context
-    
-class DeleteDashboardBike(TemplateView):
-    template_name = 'profile/view.html'
-    def get_context_data(self):
-        obj = Owner.objects.filter(oemail=self.request.user.email).first()
-        oobj = Bike.objects.filter(oid=obj.oid)
-        print(oobj)
-        context={'obj':oobj,'type':'Bikes Lend','car':False,'delete':True}
-        return context
-    
-
-class Dashboard(TemplateView):
-    template_name = 'profile/owner.html'
-    def get_context_data(self):
-        obj = Owner.objects.filter(oemail=self.request.user.email).first()
-        objo = Owner.objects.filter(oemail=self.request.user.email).first().oid
-        print(self.request.user.username)
-        A = Lend.objects.filter(oid=objo)
-        L = None
-        List = []
-        for lend in A:
-            L = Approval.objects.filter(lid=lend,approve=True)
-            if L:
-                List.append(lend)
-        for ob in List:
-            x = ob.date_of_return - date.today()
-            print(x)
-            if x.days <= 0:
-                ob.valid = False
-                ob.save()
-        context={'obj':obj,'id':123,'owner':True,'L':List}
-        return context
-
-class CustomerDashboard(TemplateView):
-    template_name = 'profile/owner.html'
-    def get_context_data(self):
-        obj = Customer.objects.filter(cemail=self.request.user.email).first()
-        objc = Customer.objects.filter(cemail=self.request.user.email).first().cid
-        print(self.request.user.username)
-        A = Lend.objects.filter(cid=objc)
-        List = []
-        L = None
-        for lend in A:
-            L = Approval.objects.filter(lid=lend,approve=True)
-            if L:
-                List.append(lend)
-        for ob in List:
-            x = ob.date_of_return - date.today()
-            print(x)
-            if x.days <= 0:
-                ob.valid = False
-                ob.save()
-        # date_q = L.date_upload - L.date_of_return
-        print(L)
-        context={'obj':obj,'id':123,'owner':False,'L':List}
-        return context
-
-    def dateCalc(self):
-        return (self.date_of_return - date.today()).days
-    def status(self):
-        if not self.valid:
-            return False
-        else:
-            return True
-
-
-class ModelFormUpdateViewCustomer(LoginRequiredMixin,UpdateView):
-    form_class = CustomerModelForm
-    template_name = 'profile/forms.html'
-    success_url = '/Lend/lend/customer/dashboard/'
-    login_url = '/login'
-
-    def get_context_data(self):
-        context = super(ModelFormUpdateViewCustomer,self).get_context_data()
-        context['type_op'] = 'Update'
-        context['type'] = 'Customer'
-        return context
-    def form_invalid(self,form):
-        return redirect('/Lend/lend/customer/dashboard/')
-
-    def get_queryset(self):
-        return Customer.objects.all()
-
-class ModelFormUpdateViewOwner(LoginRequiredMixin,UpdateView):
-    form_class = OwnerModelForm
-    template_name = 'profile/forms.html'
-    success_url = '/Lend/lend/dashboard/'
-    login_url = '/login'
-    def get_context_data(self):
-        context = super(ModelFormUpdateViewOwner,self).get_context_data()
-        context['type_op'] = 'Update'
-        context['type'] = 'Owner'
-        return context
-    def form_invalid(self,form):
-        return redirect('/Lend/lend/dashboard/')
-
-    def get_queryset(self):
-        return Owner.objects.all()
+def validate_username(username):
+	account = None
+	try:
+		account = Account.objects.get(username=username)
+	except Account.DoesNotExist:
+		return None
+	if account != None:
+		return username
 
 
 
-class CarDeleteView(DeleteView):
-    model = Car
-    success_url ="/Lend/lend/deletecar/"
 
-class BikeDeleteView(DeleteView):
-    model = Bike
-    success_url ="/Lend/lend/deletebike/"
 
-class BookVehicleBike(LoginRequiredMixin,TemplateView):
-    template_name = 'profile/book.html'
+		
 
-    def get_context_data(self,pk,*args):
-        print(pk)
-        B = Bike.objects.filter(bike_id=pk).first()
-        print(B.bname)
-        O=B.oid
-        print(self.request.POST.get('question'))
-        context={'objb':B,'objo':O,'bike':True}
-        return context
-class BookVehicleCar(LoginRequiredMixin,TemplateView):
-    template_name = 'profile/book.html'
 
-    def get_context_data(self,pk,*args):
-        print(pk)
-        B = Car.objects.filter(car_id=pk).first()
-        print(B.cname)
-        O=B.oid
-        print(self.request.POST.get('question'))
-        context={'objb':B,'objo':O,'bike':False}
-        return context
-class ModelFormUpdateViewLend(LoginRequiredMixin,UpdateView):
-    form_class = LendModelForm
-    template_name = 'profile/forms.html'
-    success_url = '/Lend/lend/customer/dashboard/'
-    login_url = '/login'
-    def get_context_data(self):
-        context = super(ModelFormUpdateViewLend,self).get_context_data()
-        context['type_op'] = 'Update'
-        context['type'] = 'Customer'
-        return context
+def SignupView(request):
+    if request.method == 'POST':
+        form = CustomFormCreate(request.POST)
+        if form.is_valid():
+        	form.save()
+        	username = form.cleaned_data.get('username')
+        	email = form.cleaned_data.get('email')
+        	raw_password = form.cleaned_data.get('password')
+        	# user = authenticate(username=email, password=raw_password)
+        	# login(request, user)
+        	return redirect('home')
+    else:
+        form = CustomFormCreate()
+    return render(request, 'signup.html', {'form': form})
 
-    def form_invalid(self,form):
-        return redirect('/Lend/customer/lend/dashboard/')
+class AboutView(TemplateView):
+	template_name = "pwa/about.html"
 
-    def get_queryset(self):
-        return Lend.objects.all()
-class NotificationViewLendApprove(LoginRequiredMixin,TemplateView):
-    template_name = 'profile/view.html'
+class ContactView(TemplateView):
+	template_name = "pwa/aboutus.html"
 
-    def get_context_data(self,pk):
-        context = {}
-        z = True
-        if self.request.user.is_owner:
-            O = Approval.objects.get(ap_id=pk)
-            O.approve = True
-            O.save()
-            A = Approval.objects.filter(username=self.request.user.username,approve=False)
-            
-    
-            C = Customer.objects.filter(cemail=self.request.user.email).first()
-            context = { 'obj':A,'z':z}
-        return context
 
-class NotificationViewLendReject(LoginRequiredMixin,TemplateView):
-    template_name = 'profile/view.html'
 
-    def get_context_data(self,pk):
-        context = {}
-        z = True
-        if self.request.user.is_owner:
-            O = Approval.objects.get(ap_id=pk)
-            O.delete()
-            A = Approval.objects.filter(username=self.request.user.username,approve=False)
-            
-    
-            C = Customer.objects.filter(cemail=self.request.user.email).first()
-            context = { 'obj':A,'z':z}
-        return context
-class NotificationViewLend(LoginRequiredMixin,TemplateView):
-    template_name = 'profile/view.html'
+def view(request):
+	if request.user.is_authenticated: 
+		if request.user.is_owner:
+			return HttpResponseRedirect("/Lend/lend/dashboard/")
+		else:
+			return HttpResponseRedirect("/home")
 
-    def get_context_data(self):
-        context = {}
-        z = True
-        if self.request.user.is_owner:
-            A = Approval.objects.filter(username=self.request.user.username,approve=False)
-            C = Customer.objects.filter(cemail=self.request.user.email).first()
-            context = { 'obj':A,'z':z}
-        return context
+class SuccessURLAllowedHostsMixin:
+    success_url_allowed_hosts = set()
 
-class BookVehicleQBike(LoginRequiredMixin,TemplateView):
-    template_name = 'profile/book.html'
+    def get_success_url_allowed_hosts(self):
+        return {self.request.get_host(), *self.success_url_allowed_hosts}
 
-    def get_context_data(self,pk):
-        B = Bike.objects.filter(bike_id=pk).first()
-        O = B.oid
-        C = Customer.objects.filter(cemail=self.request.user.email).first()
-        print(C)
-        print(O)
-        print(B.vid)
-        le = Lend.objects.filter(vid=B.vid,valid=True).count()
-        a = ""
-        if le > 0:
-            q = False
-            p = True
-        else:
-            q = True
-            p = False
-            print(C)
-            L = Lend(cid=C,oid=O,vid=B.vid)
-            print(L.lid)
-            L.save()
-            A = Approval(lid=L,username=L.oid.oname)
-            A.save()
-            a = str(L.lid)
-        context={'q':q,'p':p,'objb':B,'objo':O,'bike':True,'lid':a}
-        return context
-class BookVehicleQCar(LoginRequiredMixin,TemplateView):
-    template_name = 'profile/book.html'
+class LoginView(SuccessURLAllowedHostsMixin, FormView):
+    """
+    Display the login form and handle the login action.
+    """
+    form_class = CustomAuthCreate
+    authentication_form = None
+    redirect_field_name = REDIRECT_FIELD_NAME
+    template_name = 'registration/login.html'
+    redirect_authenticated_user = False
+    extra_context = None
 
-    def get_context_data(self,pk):
-        B = Car.objects.filter(car_id=pk).first()
-        O = B.oid
-        C = Customer.objects.filter(cemail=self.request.user.email).first()
-        print(C)
-        print(O)
-        print(B.vid)
-        le = Lend.objects.filter(vid=B.vid).count()
-        a = ""
-        if le > 0:
-            q = False
-            p = True
-        else:
-            q = True
-            p = False
-            L = Lend(cid=C,oid=O,vid=B.vid)
-            print(L.lid)
-            L.save()
-            A = Approval(lid=L,username=L.oid.oname)
-            A.save()
-            a = str(L.lid)
-        context={'q':q,'p':p,'objb':B,'objo':O,'bike':False,'lid':a}
-        return context
+    @method_decorator(sensitive_post_parameters())
+    @method_decorator(csrf_protect)
+    @method_decorator(never_cache)
+    def dispatch(self, request, *args, **kwargs):
+        if self.redirect_authenticated_user and self.request.user.is_authenticated:
+            redirect_to = self.get_success_url()
+            if redirect_to == self.request.path:
+                raise ValueError(
+                    "Redirection loop for authenticated user detected. Check that "
+                    "your LOGIN_REDIRECT_URL doesn't point to a login page."
+                )
+            return HttpResponseRedirect(redirect_to)
+        return super().dispatch(request, *args, **kwargs)
 
-def insert_bike(request,id=0):
-    csvFilePath = staticfiles_storage.path('bike_lend.csv')
-    
-    print(csvFilePath)
-    data = {}
-    O = Owner.objects.all().first()
-    # Open a csv reader called DictReader
-    with open(csvFilePath) as csvf:
-        csvReader = csv.DictReader(csvf)
 
-        for rows in csvReader:
-            V = Vehicle.objects.filter(vid=rows['vid_id']).first()
+    def get_redirect_url(self):
+        """Return the user-originating redirect URL if it's safe."""
+
+        redirect_to = self.request.POST.get(
+            self.redirect_field_name,
+            self.request.GET.get(self.redirect_field_name, '')
+        )
+        url_is_safe = url_has_allowed_host_and_scheme(
+            url=redirect_to,
+            allowed_hosts=self.get_success_url_allowed_hosts(),
+            require_https=self.request.is_secure(),
+        )
+        return redirect_to if url_is_safe else ''
+
+    def get_form_class(self):
+        return self.authentication_form or self.form_class
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs() 
+        kwargs['request'] = self.request
+        return kwargs
+
+    def form_valid(self, form):
+        """Security check complete. Log the user in."""
+        # L = Login.objects.filter(username=request.user.username).update(timestamp_logout = datetime.datetime.now(tz=timezone.utc))
+	# L1 = Login.objects.filter(username=request.user.username).update(total_usage = timestamp_logout - timestamp_login)
+	# print(L1)
         
-            _, created = Bike.objects.get_or_create(
-    bike_id      = rows['bike_id'],
-    vid         = V, 
-    bnumber     = rows['bnumber'], 
-    btype       = rows['btype'], 
-    bmodel      = rows['bmodel'], 
-    bname       = rows['bname'], 
-    brating     = rows['brating'], 
-    bprice      = rows['bprice'], 
-    bimage      = rows['bimage'], 
-    oid        = O, 
-    description = rows['description'], 
-    slug		= rows['slug']
+        auth_login(self.request, form.get_user())
+        return HttpResponseRedirect(self.get_success_url())
 
-            )
-        return JsonResponse("Added Successfully!!" , safe=False)
-
-
-
-
-
-class ModelFormUpdateViewBike(LoginRequiredMixin,UpdateView):
-    form_class = BikeModelForm
-    template_name = 'bikes/forms_bike.html'
-    success_url = '/Lend/lend/viewbike/'
-    login_url = '/login'
-    def get_context_data(self,*args,**kwargs):
-        context = super(ModelFormUpdateViewBike,self).get_context_data()
-        context['type_op'] = 'Update'
-        context['type'] = self.get_object().bname
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        current_site = get_current_site(self.request)
+        context.update({
+            self.redirect_field_name: self.get_redirect_url(),
+            'site': current_site,
+            'site_name': current_site.name,
+            **(self.extra_context or {})
+        })
         return context
-    def get_queryset(self):
-        return Bike.objects.all()
-    def form_invalid(self):
-        return redirect('/Lend/lend/viewbike/')
-    
-class ModelFormCreateViewCar(CreateView):
-    form_class = CarModelForm
-    template_name = 'cars/forms_car.html'
-    success_url = '/Lend/lend/dashboard/'
-    login_url = '/login'
 
-    def form_valid(self,form):
-        instance = form.save(commit=False)
-        instance.user = self.request.user
-        instance.save()
-        return super().form_valid(form)
-    def form_invalid(self):
-        return redirect('/Lend/lend/dashboard/')
+    def get_success_url(self):
+        U = CouponHandling.objects.get(username=self.request.user.username)	
+        U.user = self.request.user.username
+        U.timestamp_login = datetime.datetime.now(timezone.utc)
+        U.save()
+       	U = CouponHandling.objects.all().first()
+       	print("U.user",U.user,U.timestamp_login)
+        url = self.get_redirect_url()
+        return url or resolve_url(settings.LOGIN_REDIRECT_URL)
 
 
-class CarList(ListView):
-    template_name = 'cars/car_list.html'
-    def get_queryset(self):
-        print(self.request.GET)
-        return Car.objects.all()
-    def get_context_data(self):
-        context = {}
+def LogoutView(request):
+	U = CouponHandling.objects.get(username=request.user.username)	
+	U.timestamp_logout = datetime.datetime.now(timezone.utc)
+	datetime1 = U.timestamp_logout
+	datetime2 = U.timestamp_login
+	if not U.total_usage :
+		U.total_usage = str(datetime1 - datetime2)
+
+	else:
+		print('U.total_usage',U.total_usage)
+		print('U.total_usage :',str(datetime1 - datetime2))
+		a,b,c=str(U.total_usage).split(":")
+		print(a,b,c)
+		try:
+			x,y,z=(str(datetime1 - datetime2)).split(":")
+		except:
+			return redirect('home')
+		print(x,y,z)
+		a = int(a);b = int(b);x = int(x);y = int(y);
+		print(int(a+x),int(int(b)+int(y)),0)
+		p = int(a+x)
+		q = int(b+y)
+		if q >= 60:
+			p = p + 1
+			q = q - 60
+		U.total_usage = datetime.time(p,q,0)
+		if p >=1 and q>=40:
+			G = Get.objects.get(username=request.user.username)
+			G.coup_id = Coupon.objects.get(coup_id=2)
+			G.coupon_unique_code = 'coup'+str(random.randint(1111111,9999999))
+			print(G)
+			G.save()
+	U.save()
+	print('U.total_usage',U.total_usage)
+	logout(request)
+	context={}
+	return redirect('home')
+
+
+
+class HomeView(TemplateView):
+	template_name = "pwa/new.html"
+
+	def get_context_data(self,*args,**kwargs):
+		# if self.request.user.is_authenticated:
+		# 	A = None
+		# 	if self.request.user.is_owner:
+		# 		O = Owner.objects.all().filter(oname=self.request.user.username)
+		# 		A = Lend.objects.all().filter(oid=O)
+		# 	else:
+		# 		O = Customer.objects.all().filter(cname=self.request.user.username)
+		# 		A = Lend.objects.filter(cid=O)
+		# 	List = []
+		# 	L = None
+		# 	print(A)
+		# 	for lender in A:
+		# 		L = Approval.objects.filter(lid=lender).filter(approve=True)
+		# 		if L:
+		# 			List.append(lender)
+		# 	for ob in List:
+		# 		x = ob.date_of_return - date.today()
+		# 		print(x)
+		# 		if x.days <= 0:
+		# 			ob.valid = False
+		# 			ob.save()
+		CarCount = Car.objects.all().count()
+		BikeCount = Bike.objects.all().count()
+		LoginCount = Login.objects.all().count()
+		TouristCount = Tourist.objects.all().count()
+		context = super().get_context_data(*args,**kwargs)
+		context['CarCount'] = CarCount
+		context['BikeCount'] = BikeCount
+		context['LoginCount'] = LoginCount
+		context['TouristCount'] = TouristCount
+		context['objc'] = Car.objects.all()[:5]
+		context['objb'] = Bike.objects.all()[:5]
+		if self.request.user.is_authenticated:
+			context['user'] = self.request.user
+			context['check'] = True
+		else:
+			context['check'] = False
         
-        print(self.request.GET.get('sort'))
-        if self.request.GET.get('searchsort') == '1':
-            search = self.request.GET.get('search')
-            C = Car.objects.all().filter(Q(cname__contains=search)|
-            Q(cmodel__contains=search)|
-            Q(ctype__contains=search)|
-            Q(description__contains=search)
-            )
-            context['object_list'] = C
-        elif self.request.GET.get('sort') == '1':
-            if self.request.GET.get('sort1') == '1':
-                context['object_list'] = Car.objects.order_by('cprice')
-            else:
-                context['object_list'] = Car.objects.order_by('crating')
-        elif self.request.GET.get('sort') == '0': 
-            if not self.request.GET.get('sort1') == '1':
-                context['object_list'] = Car.objects.order_by('-crating')
-            else:
-                context['object_list'] = Car.objects.order_by('-cprice')
-        else:
-            context['object_list'] = Car.objects.all()
-        return context
-
-
-class BikeList(ListView):
-    template_name = 'bikes/bike_list.html'
-
-    def get_queryset(self):
-        print(self.request.GET)
-        return Bike.objects.all()
-    def get_context_data(self):
-        context = {}
-        # context['object_list'] = Bike.objects.all()
-        print(self.request.GET.get('sort'))
-        if self.request.GET.get('searchsort') == '1':
-            search = self.request.GET.get('search')
-            context['object_list'] = Bike.objects.all().filter(Q(bname__contains=search)|
-            Q(bmodel__contains=search)|
-            Q(btype__contains=search)|
-            Q(description__contains=search)
-            )
-        elif self.request.GET.get('sort') == '1':
-            if self.request.GET.get('sort1') == '1':
-                context['object_list'] = Bike.objects.order_by('bprice')
-            else:
-                context['object_list'] = Bike.objects.order_by('brating')
-        elif self.request.GET.get('sort') == '0':
-            if not self.request.GET.get('sort1') == '1':
-                context['object_list'] = Bike.objects.order_by('-brating')
-            else:
-                context['object_list'] = Bike.objects.order_by('-bprice')
-        else:
-            context['object_list'] = Bike.objects.all()
-        
-        return context
+		print(context)
+		return context
